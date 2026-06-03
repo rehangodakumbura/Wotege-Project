@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "frontend-scanner": {
+      "description": "Scans the React/Vite frontend codebase for structure, components, pages, routes, and issues.",
+      "mode": "subagent"
+    },
+    "backend-scanner": {
+      "description": "Scans the Spring Boot backend for controllers, services, repositories, entities, and API structure.",
+      "mode": "subagent"
+    },
+    "database-scanner": {
+      "description": "Scans the PostgreSQL database schema, JPA entities, migrations, and data relationships.",
+      "mode": "subagent"
+    }
+  }
+}
