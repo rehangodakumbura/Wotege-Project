@@ -11,6 +11,7 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (user: UserAccount) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -54,8 +55,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, token: null, loading: false, error: null });
   }, []);
 
+  const updateUser = useCallback((user: UserAccount) => {
+    setState((s) => ({ ...s, user }));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

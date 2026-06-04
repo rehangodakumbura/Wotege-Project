@@ -1,14 +1,11 @@
-import { motion, AnimatePresence } from 'motion/react';
 import { 
   Building2, 
-  UtensilsCrossed, 
   LayoutDashboard, 
   Users, 
   CalendarDays, 
   Store, 
   BarChart3, 
   Settings,
-  ChevronRight,
   LogOut,
   UserCircle,
   MenuSquare,
@@ -35,21 +32,11 @@ const navItems = [
   { icon: BarChart3, label: 'Reports', path: '/reports' },
 ];
 
-export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (val: boolean) => void }) {
+export function Sidebar() {
   const location = useLocation();
 
   return (
-    <>
-      {isOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm" 
-          onClick={() => setIsOpen(false)} 
-        />
-      )}
-      <aside className={cn(
-        "fixed md:static inset-y-0 left-0 z-50 w-20 md:w-24 bg-wotege-charcoal border-r border-white/5 flex flex-col items-center py-6 md:py-8 transition-transform duration-300 md:translate-x-0 shrink-0",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+    <aside className="static inset-y-0 left-0 z-50 w-20 md:w-24 bg-wotege-charcoal border-r border-white/5 flex flex-col items-center py-6 md:py-8 shrink-0">
       <div className="mb-12">
         <span className="text-wotege-gold font-serif text-3xl font-bold tracking-tighter">W</span>
       </div>
@@ -61,7 +48,6 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (va
             <NavLink
               key={item.path}
               to={item.path}
-              onClick={() => setIsOpen(false)}
               className={cn(
                 "w-full aspect-square max-w-[3.5rem] mx-auto rounded-xl flex items-center justify-center transition-all duration-200 group relative",
                 isActive 
@@ -77,17 +63,16 @@ export function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (va
       </nav>
 
       <div className="mt-auto px-4 w-full flex flex-col gap-4">
-        <NavLink onClick={() => setIsOpen(false)} to="/settings" className={({isActive}) => cn(
+        <NavLink to="/settings" className={({isActive}) => cn(
           "w-full aspect-square max-w-[3.5rem] mx-auto rounded-xl flex items-center justify-center transition-all",
           isActive ? "bg-wotege-gold/10 text-wotege-gold shadow-[0_0_20px_rgba(197,160,89,0.2)]" : "text-white/40 hover:text-wotege-gold"
         )}>
           <Settings className="w-6 h-6 shrink-0" strokeWidth={1.5} />
         </NavLink>
-        <NavLink onClick={() => setIsOpen(false)} to="/login" className="w-full aspect-square max-w-[3.5rem] mx-auto rounded-xl flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all">
+        <NavLink to="/login" className="w-full aspect-square max-w-[3.5rem] mx-auto rounded-xl flex items-center justify-center text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all">
           <LogOut className="w-6 h-6 shrink-0" strokeWidth={1.5} />
         </NavLink>
       </div>
     </aside>
-    </>
   );
 }

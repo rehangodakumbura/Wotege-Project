@@ -1,7 +1,11 @@
 package com.example.demo.room;
 
 import java.util.List;
+import java.util.Optional;
 
+import com.example.demo.reservation.Reservation;
+import com.example.demo.reservation.ReservationRepository;
+import com.example.demo.reservation.ReservationStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,15 +17,48 @@ public class RoomService {
 
 	private final RoomRepository roomRepository;
 	private final RoomTypeRepository roomTypeRepository;
+	private final ReservationRepository reservationRepository;
 
-	public RoomService(RoomRepository roomRepository, RoomTypeRepository roomTypeRepository) {
+	public RoomService(
+		RoomRepository roomRepository,
+		RoomTypeRepository roomTypeRepository,
+		ReservationRepository reservationRepository
+	) {
 		this.roomRepository = roomRepository;
 		this.roomTypeRepository = roomTypeRepository;
+		this.reservationRepository = reservationRepository;
 	}
 
 	@Transactional(readOnly = true)
-	public List<Room> findAll() {
-		return roomRepository.findAll();
+	public List<RoomView> findAll() {
+		List<Room> rooms = roomRepository.findAll();
+		return rooms.stream().map(this::toView).toList();
+	}
+
+	@Transactional(readOnly = true)
+	public RoomView findViewById(Long id) {
+		Room room = roomRepository.findById(id)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
+		return toView(room);
+	}
+
+	private RoomView toView(Room room) {
+		List<ReservationStatus> activeStatuses = switch (room.getStatus()) {
+			case RESERVED -> List.of(ReservationStatus.PENDING, ReservationStatus.CONFIRMED);
+			case OCCUPIED -> List.of(ReservationStatus.IN_HOUSE, ReservationStatus.CONFIRMED);
+			case CLEANING -> List.of(ReservationStatus.COMPLETED);
+			default -> List.of();
+		};
+		Reservation current = null;
+		if (!activeStatuses.isEmpty()) {
+			List<Reservation> matches = reservationRepository
+				.findByRoomIdAndStatusInOrderByCheckInDateDesc(room.getId(), activeStatuses);
+			Optional<Reservation> first = matches.stream().findFirst();
+			if (first.isPresent()) {
+				current = first.get();
+			}
+		}
+		return new RoomView(room, current);
 	}
 
 	public Room create(Room payload, Long roomTypeId) {

@@ -2,6 +2,7 @@ package com.example.demo.reservation;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,4 +18,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 	List<Object[]> findDailyReservationRevenue(@Param("start") LocalDate start, @Param("end") LocalDate end);
 
 	long countByStatusAndCheckInDateBetween(ReservationStatus status, LocalDate start, LocalDate end);
+
+	List<Reservation> findByRoomIdAndStatusInOrderByCheckInDateDesc(Long roomId, Collection<ReservationStatus> statuses);
 }

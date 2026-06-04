@@ -15,7 +15,10 @@ import Packages from './pages/hotel/Packages';
 import Inventory from './pages/inventory/Inventory';
 import Roles from './pages/settings/Roles';
 import RoomTypes from './pages/settings/RoomTypes';
+import EditProfile from './pages/profile/EditProfile';
+import Preferences from './pages/profile/Preferences';
 import NotFound from './pages/NotFound';
+import SearchResults from './pages/SearchResults';
 import { ToastProvider } from './components/ui/Toast';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { AuthProvider, useAuth } from './lib/auth-context';
@@ -52,9 +55,12 @@ function AppRoutes() {
         <Route path="/customers" element={<Customers />} />
         <Route path="/staff" element={<Staff />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/search" element={<SearchResults />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/roles" element={<Roles />} />
         <Route path="/settings/room-types" element={<RoomTypes />} />
+        <Route path="/profile" element={<EditProfile />} />
+        <Route path="/preferences" element={<Preferences />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

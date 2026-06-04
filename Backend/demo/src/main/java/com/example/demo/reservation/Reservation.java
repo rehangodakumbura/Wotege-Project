@@ -2,6 +2,7 @@ package com.example.demo.reservation;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 import com.example.demo.room.Room;
 import jakarta.persistence.Column;
@@ -41,6 +42,12 @@ public class Reservation {
 
 	@Column(nullable = false)
 	private LocalDate checkOutDate;
+
+	@Column
+	private LocalTime checkInTime;
+
+	@Column
+	private LocalTime checkOutTime;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
@@ -114,6 +121,22 @@ public class Reservation {
 
 	public void setCheckOutDate(LocalDate checkOutDate) {
 		this.checkOutDate = checkOutDate;
+	}
+
+	public LocalTime getCheckInTime() {
+		return checkInTime;
+	}
+
+	public void setCheckInTime(LocalTime checkInTime) {
+		this.checkInTime = checkInTime;
+	}
+
+	public LocalTime getCheckOutTime() {
+		return checkOutTime;
+	}
+
+	public void setCheckOutTime(LocalTime checkOutTime) {
+		this.checkOutTime = checkOutTime;
 	}
 
 	public ReservationStatus getStatus() {

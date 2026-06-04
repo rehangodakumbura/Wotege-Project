@@ -25,8 +25,13 @@ public class RoomController {
 	}
 
 	@GetMapping
-	public List<Room> list() {
+	public List<RoomView> list() {
 		return roomService.findAll();
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<RoomView> getById(@PathVariable Long id) {
+		return ResponseEntity.ok(roomService.findViewById(id));
 	}
 
 	@PostMapping

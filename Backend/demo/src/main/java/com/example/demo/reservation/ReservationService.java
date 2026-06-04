@@ -86,6 +86,8 @@ public class ReservationService {
 		target.setGuestPhone(payload.getGuestPhone());
 		target.setCheckInDate(payload.getCheckInDate());
 		target.setCheckOutDate(payload.getCheckOutDate());
+		target.setCheckInTime(payload.getCheckInTime());
+		target.setCheckOutTime(payload.getCheckOutTime());
 		target.setStatus(payload.getStatus() == null ? ReservationStatus.PENDING : payload.getStatus());
 		target.setBookingType(payload.getBookingType() == null ? BookingType.STANDARD : payload.getBookingType());
 		target.setAmount(payload.getAmount());

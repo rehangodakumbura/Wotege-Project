@@ -3,6 +3,7 @@ package com.example.demo.config;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.LinkedHashSet;
 
 import com.example.demo.audit.AuditLog;
@@ -59,13 +60,19 @@ public class DataSeeder {
 
 	private final String adminEmail;
 	private final String adminPassword;
+	private final MenuCategoryRepository menuCategoryRepository;
+	private final MenuItemRepository menuItemRepository;
 
 	public DataSeeder(
 		@Value("${app.admin-email:rehan2003@gmail.com}") String adminEmail,
-		@Value("${app.admin-password:rehan2003}") String adminPassword
+		@Value("${app.admin-password:rehan2003}") String adminPassword,
+		MenuCategoryRepository menuCategoryRepository,
+		MenuItemRepository menuItemRepository
 	) {
 		this.adminEmail = adminEmail;
 		this.adminPassword = adminPassword;
+		this.menuCategoryRepository = menuCategoryRepository;
+		this.menuItemRepository = menuItemRepository;
 	}
 
 	@Bean
@@ -145,7 +152,37 @@ public class DataSeeder {
 				return roomTypeRepository.save(roomType);
 			});
 
+			RoomType presidential = roomTypeRepository.findByCode("PRESIDENTIAL").orElseGet(() -> {
+				RoomType roomType = new RoomType();
+				roomType.setCode("PRESIDENTIAL");
+				roomType.setName("Presidential");
+				roomType.setBaseRate(85000);
+				roomType.setBeds(3);
+				roomType.setCapacity(6);
+				roomType.setAmenities(new LinkedHashSet<>(java.util.List.of("Free Wi-Fi", "AC", "TV", "Mini Bar", "Sea View", "Balcony", "Private Pool", "Jacuzzi")));
+				return roomTypeRepository.save(roomType);
+			});
+
+			RoomType penthouse = roomTypeRepository.findByCode("PENTHOUSE").orElseGet(() -> {
+				RoomType roomType = new RoomType();
+				roomType.setCode("PENTHOUSE");
+				roomType.setName("Penthouse");
+				roomType.setBaseRate(150000);
+				roomType.setBeds(4);
+				roomType.setCapacity(8);
+				roomType.setAmenities(new LinkedHashSet<>(java.util.List.of("Free Wi-Fi", "AC", "TV", "Mini Bar", "Sea View", "Balcony", "Jacuzzi", "Private Pool")));
+				return roomTypeRepository.save(roomType);
+			});
+
+			ensureRoom(roomRepository, "101", 1, 35000, 2, RoomStatus.AVAILABLE, deluxe, java.util.List.of("Sea View", "Balcony"), null);
+			ensureRoom(roomRepository, "102", 1, 35000, 2, RoomStatus.OCCUPIED, deluxe, java.util.List.of("Balcony"), "Alex M.");
+			ensureRoom(roomRepository, "201", 2, 85000, 3, RoomStatus.CLEANING, presidential, java.util.List.of("Sea View", "Private Pool", "Balcony"), null);
+			ensureRoom(roomRepository, "202", 2, 15000, 1, RoomStatus.AVAILABLE, standard, java.util.List.of(), null);
+			ensureRoom(roomRepository, "203", 2, 15000, 1, RoomStatus.RESERVED, standard, java.util.List.of("Sea View"), "Sarah W.");
+			ensureRoom(roomRepository, "301", 3, 150000, 4, RoomStatus.MAINTENANCE, penthouse, java.util.List.of("Sea View", "Balcony", "Jacuzzi"), null);
+
 			if (roomRepository.count() == 0) {
+				// legacy guard for very-first-run environments
 				Room room101 = new Room();
 				room101.setRoomNumber("101");
 				room101.setFloor(1);
@@ -194,112 +231,207 @@ public class DataSeeder {
 
 				Reservation reservation1 = new Reservation();
 				reservation1.setBookingCode("RES-001");
-				reservation1.setGuestName("Richard Thompson");
-				reservation1.setGuestEmail("r.thompson@corp.uk");
-				reservation1.setGuestPhone("+44 7911 123456");
-				reservation1.setCheckInDate(LocalDate.now().plusDays(1));
-				reservation1.setCheckOutDate(LocalDate.now().plusDays(4));
-				reservation1.setStatus(ReservationStatus.CONFIRMED);
+				reservation1.setGuestName("Alex Morgan");
+				reservation1.setGuestEmail("alex.morgan@example.com");
+				reservation1.setGuestPhone("+971 55 987 6543");
+				reservation1.setCheckInDate(LocalDate.now().minusDays(1));
+				reservation1.setCheckOutDate(LocalDate.now().plusDays(1));
+				reservation1.setCheckInTime(LocalTime.of(14, 0));
+				reservation1.setCheckOutTime(LocalTime.of(12, 0));
+				reservation1.setStatus(ReservationStatus.IN_HOUSE);
 				reservation1.setBookingType(BookingType.STANDARD);
-				reservation1.setAmount(new BigDecimal("450000"));
+				reservation1.setAmount(new BigDecimal("105000"));
 				reservation1.setRoom(room102);
 				reservationRepository.save(reservation1);
 
 				Reservation reservation2 = new Reservation();
 				reservation2.setBookingCode("RES-002");
-				reservation2.setGuestName("Sofia Al-Maktoum");
-				reservation2.setGuestEmail("sofia.al@example.com");
+				reservation2.setGuestName("Sarah Williams");
+				reservation2.setGuestEmail("sarah.w@example.com");
 				reservation2.setGuestPhone("+971 50 123 4567");
-				reservation2.setCheckInDate(LocalDate.now().plusDays(2));
-				reservation2.setCheckOutDate(LocalDate.now().plusDays(5));
-				reservation2.setStatus(ReservationStatus.PENDING);
+				reservation2.setCheckInDate(LocalDate.now().plusDays(1));
+				reservation2.setCheckOutDate(LocalDate.now().plusDays(3));
+				reservation2.setCheckInTime(LocalTime.of(15, 0));
+				reservation2.setCheckOutTime(LocalTime.of(11, 0));
+				reservation2.setStatus(ReservationStatus.CONFIRMED);
 				reservation2.setBookingType(BookingType.COUPLE);
-				reservation2.setAmount(new BigDecimal("120000"));
+				reservation2.setAmount(new BigDecimal("45000"));
 				reservation2.setRoom(room203);
 				reservationRepository.save(reservation2);
+			} else {
+				// Backfill times on existing seeded reservations and ensure room statuses are consistent
+				reservationRepository.findAll().forEach(r -> {
+					boolean dirty = false;
+					if (r.getCheckInTime() == null && "RES-001".equals(r.getBookingCode())) {
+						r.setCheckInTime(LocalTime.of(14, 0));
+						r.setCheckOutTime(LocalTime.of(12, 0));
+						dirty = true;
+					}
+					if (r.getCheckInTime() == null && "RES-002".equals(r.getBookingCode())) {
+						r.setCheckInTime(LocalTime.of(15, 0));
+						r.setCheckOutTime(LocalTime.of(11, 0));
+						dirty = true;
+					}
+					if (dirty) {
+						reservationRepository.save(r);
+					}
+				});
+				reservationRepository.findAll().forEach(r -> {
+					if (r.getRoom() == null) {
+						return;
+					}
+					Room room = r.getRoom();
+					switch (r.getStatus()) {
+						case CONFIRMED, IN_HOUSE -> {
+							if (room.getStatus() == RoomStatus.RESERVED) {
+								room.setStatus(RoomStatus.OCCUPIED);
+								roomRepository.save(room);
+							}
+						}
+						case PENDING -> {
+							if (room.getStatus() == RoomStatus.AVAILABLE) {
+								room.setStatus(RoomStatus.RESERVED);
+								room.setGuestName(r.getGuestName());
+								roomRepository.save(room);
+							}
+						}
+						default -> { }
+					}
+				});
 			}
 
 			if (branchRepository.count() == 0) {
-				Branch dubai = new Branch();
-				dubai.setName("WOTEGE Dubai Marina");
-				dubai.setCode("DXB-MRN");
-				dubai.setAddress("Dubai Marina Walk, Jumeirah Beach Residence");
-				dubai.setCity("Dubai");
-				dubai.setCountry("UAE");
-				dubai.setPhone("+971 4 123 4567");
-				dubai.setEmail("marina@wotege.ae");
-				dubai.setActive(true);
-				dubai.setStatus(BranchStatus.ACTIVE);
-				branchRepository.save(dubai);
+				Branch dubaiMarina = new Branch();
+				dubaiMarina.setName("Dubai Marina");
+				dubaiMarina.setCode("DXB-MRN");
+				dubaiMarina.setAddress("Dubai Marina Walk, Jumeirah Beach Residence");
+				dubaiMarina.setCity("Dubai");
+				dubaiMarina.setCountry("UAE");
+				dubaiMarina.setPhone("+971 4 123 4567");
+				dubaiMarina.setEmail("marina@wotege.ae");
+				dubaiMarina.setActive(true);
+				dubaiMarina.setStatus(BranchStatus.ACTIVE);
+				branchRepository.save(dubaiMarina);
+
+				Branch palmJumeirah = new Branch();
+				palmJumeirah.setName("Palm Jumeirah");
+				palmJumeirah.setCode("DXB-PLM");
+				palmJumeirah.setAddress("Crescent Road, Palm Jumeirah");
+				palmJumeirah.setCity("Dubai");
+				palmJumeirah.setCountry("UAE");
+				palmJumeirah.setPhone("+971 4 234 5678");
+				palmJumeirah.setEmail("palm@wotege.ae");
+				palmJumeirah.setActive(true);
+				palmJumeirah.setStatus(BranchStatus.ACTIVE);
+				branchRepository.save(palmJumeirah);
+
+				Branch abuDhabi = new Branch();
+				abuDhabi.setName("Abu Dhabi Corniche");
+				abuDhabi.setCode("AUH-CRN");
+				abuDhabi.setAddress("Corniche Road, Al Zahiyah");
+				abuDhabi.setCity("Abu Dhabi");
+				abuDhabi.setCountry("UAE");
+				abuDhabi.setPhone("+971 2 345 6789");
+				abuDhabi.setEmail("corniche@wotege.ae");
+				abuDhabi.setActive(true);
+				abuDhabi.setStatus(BranchStatus.ACTIVE);
+				branchRepository.save(abuDhabi);
+
+				Branch sharjah = new Branch();
+				sharjah.setName("Sharjah Al Majaz");
+				sharjah.setCode("SHJ-MJZ");
+				sharjah.setAddress("Al Majaz Waterfront");
+				sharjah.setCity("Sharjah");
+				sharjah.setCountry("UAE");
+				sharjah.setPhone("+971 6 456 7890");
+				sharjah.setEmail("majaz@wotege.ae");
+				sharjah.setActive(true);
+				sharjah.setStatus(BranchStatus.ACTIVE);
+				branchRepository.save(sharjah);
+
+				Branch rasAlKhaimah = new Branch();
+				rasAlKhaimah.setName("RAK Al Hamra");
+				rasAlKhaimah.setCode("RAK-HMR");
+				rasAlKhaimah.setAddress("Al Hamra Village");
+				rasAlKhaimah.setCity("Ras Al Khaimah");
+				rasAlKhaimah.setCountry("UAE");
+				rasAlKhaimah.setPhone("+971 7 567 8901");
+				rasAlKhaimah.setEmail("alhamra@wotege.ae");
+				rasAlKhaimah.setActive(false);
+				rasAlKhaimah.setStatus(BranchStatus.INACTIVE);
+				branchRepository.save(rasAlKhaimah);
 			}
 
-			Branch branch = branchRepository.findAll().stream().findFirst().orElse(null);
+			Branch branch = branchRepository.findByActiveTrue().stream().findFirst().orElse(null);
 
 			if (menuCategoryRepository.count() == 0) {
-				MenuCategory signature = new MenuCategory();
-				signature.setCode("SIG");
-				signature.setName("Signature Dishes");
-				signature.setDescription("Our chef's special creations");
-				signature.setDisplayOrder(1);
-				signature.setActive(true);
-				menuCategoryRepository.save(signature);
+				MenuCategory starters = createCategory("STA", "Starters", "Appetizers and small plates", 1);
+				MenuCategory mains = createCategory("MNS", "Mains", "Main course dishes", 2);
+				MenuCategory desserts = createCategory("DST", "Desserts", "Sweet treats and desserts", 3);
+				MenuCategory beverages = createCategory("BVG", "Beverages", "Non-alcoholic drinks", 4);
+				MenuCategory alcohol = createCategory("ALC", "Alcohol", "Wines, spirits, and cocktails", 5);
 
 				if (menuItemRepository.count() == 0) {
-					MenuItem grill = new MenuItem();
-					grill.setCode("SIG-001");
-					grill.setName("WOTEGE Mixed Grill Platter");
-					grill.setDescription("Assorted grilled meats with saffron rice");
-					grill.setPrice(new BigDecimal("18500"));
-					grill.setCostPrice(new BigDecimal("7500"));
-					grill.setCategory(signature);
-					grill.setAvailable(true);
-					grill.setSignature(true);
-					grill.setPreparationTime(25);
-					grill.setCreatedAt(LocalDateTime.now());
-					grill.setUpdatedAt(LocalDateTime.now());
-					menuItemRepository.save(grill);
+					// Starters
+					saveMenuItem("STA-001", "Lobster Bisque", "Creamy lobster soup with cognac",
+						"https://images.unsplash.com/photo-1548943487-a2e4143fa723?q=80&w=300&auto=format&fit=crop",
+						2800, 1100, starters, true, 12);
+					saveMenuItem("STA-002", "Tuna Tartare", "Fresh yellowfin tuna with avocado",
+						"https://images.unsplash.com/photo-1559847844-5315695dadae?q=80&w=300&auto=format&fit=crop",
+						3500, 1400, starters, true, 10);
+					saveMenuItem("STA-003", "Burrata & Heirloom Tomato", "Creamy burrata with basil oil",
+						"https://images.unsplash.com/photo-1608897013039-887f21d8c804?q=80&w=300&auto=format&fit=crop",
+						3200, 1200, starters, true, 8);
 
-					MenuItem lobster = new MenuItem();
-					lobster.setCode("SIG-002");
-					lobster.setName("Butter Garlic Lobster");
-					lobster.setDescription("Fresh Atlantic lobster with garlic butter sauce");
-					lobster.setPrice(new BigDecimal("28500"));
-					lobster.setCostPrice(new BigDecimal("12000"));
-					lobster.setCategory(signature);
-					lobster.setAvailable(true);
-					lobster.setSignature(true);
-					lobster.setPreparationTime(30);
-					lobster.setCreatedAt(LocalDateTime.now());
-					lobster.setUpdatedAt(LocalDateTime.now());
-					menuItemRepository.save(lobster);
+					// Mains
+					saveMenuItem("MNS-001", "Wagyu Beef Steak", "A5 Japanese wagyu with truffle jus",
+						"https://images.unsplash.com/photo-1546241072-48010ad168d5?q=80&w=300&auto=format&fit=crop",
+						8500, 3500, mains, true, 25);
+					saveMenuItem("MNS-002", "Truffle Risotto", "Arborio rice with black truffle",
+						"https://images.unsplash.com/photo-1626379616459-b2ce1d9decbc?q=80&w=300&auto=format&fit=crop",
+						4200, 1600, mains, true, 20);
+					saveMenuItem("MNS-003", "Gold-leaf Sushi Roll", "Premium sushi with edible gold leaf",
+						"https://images.unsplash.com/photo-1579871494447-9811cf80d66c?q=80&w=300&auto=format&fit=crop",
+						5500, 2200, mains, true, 15);
+					saveMenuItem("MNS-004", "Pan-Seared Sea Bass", "Mediterranean sea bass with lemon beurre blanc",
+						"https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?q=80&w=300&auto=format&fit=crop",
+						4800, 1800, mains, true, 18);
+					saveMenuItem("MNS-005", "Herb-Crusted Lamb Rack", "New Zealand lamb with rosemary and mint",
+						"https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=300&auto=format&fit=crop",
+						6200, 2400, mains, true, 25);
 
-					MenuItem lamb = new MenuItem();
-					lamb.setCode("SIG-003");
-					lamb.setName("Herb-Crusted Lamb Rack");
-					lamb.setDescription("New Zealand lamb with rosemary and mint");
-					lamb.setPrice(new BigDecimal("22500"));
-					lamb.setCostPrice(new BigDecimal("9500"));
-					lamb.setCategory(signature);
-					lamb.setAvailable(true);
-					lamb.setSignature(true);
-					lamb.setPreparationTime(35);
-					lamb.setCreatedAt(LocalDateTime.now());
-					lamb.setUpdatedAt(LocalDateTime.now());
-					menuItemRepository.save(lamb);
+					// Desserts
+					saveMenuItem("DST-001", "Matcha Tiramisu", "Japanese twist on classic tiramisu",
+						"https://images.unsplash.com/photo-1571115177098-24ec42ed204d?q=80&w=300&auto=format&fit=crop",
+						1800, 600, desserts, true, 5);
+					saveMenuItem("DST-002", "Molten Chocolate Lava", "Dark chocolate fondant with vanilla ice cream",
+						"https://images.unsplash.com/photo-1606313564200-e75d5e30476c?q=80&w=300&auto=format&fit=crop",
+						2200, 750, desserts, true, 12);
+					saveMenuItem("DST-003", "Crème Brûlée", "Classic vanilla bean custard",
+						"https://images.unsplash.com/photo-1470124182917-cc6e71b22ecc?q=80&w=300&auto=format&fit=crop",
+						1500, 500, desserts, true, 5);
 
-					MenuItem seaBass = new MenuItem();
-					seaBass.setCode("SIG-004");
-					seaBass.setName("Pan-Seared Sea Bass");
-					seaBass.setDescription("Mediterranean sea bass with lemon beurre blanc");
-					seaBass.setPrice(new BigDecimal("19500"));
-					seaBass.setCostPrice(new BigDecimal("8000"));
-					seaBass.setCategory(signature);
-					seaBass.setAvailable(true);
-					seaBass.setSignature(false);
-					seaBass.setPreparationTime(20);
-					seaBass.setCreatedAt(LocalDateTime.now());
-					seaBass.setUpdatedAt(LocalDateTime.now());
-					menuItemRepository.save(seaBass);
+					// Beverages
+					saveMenuItem("BVG-001", "Signature Iced Tea", "House-brewed with peach and mint",
+						"https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=300&auto=format&fit=crop",
+						950, 250, beverages, true, 3);
+					saveMenuItem("BVG-002", "Fresh Coconut Water", "Young Thai coconut",
+						"https://images.unsplash.com/photo-1525385133512-2f3bdd039054?q=80&w=300&auto=format&fit=crop",
+						1100, 350, beverages, true, 2);
+					saveMenuItem("BVG-003", "Espresso Martini", "Freshly brewed espresso shaken with vodka",
+						"https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=300&auto=format&fit=crop",
+						1800, 600, beverages, true, 5);
+
+					// Alcohol
+					saveMenuItem("ALC-001", "Dom Perignon 2012", "Prestige cuvée champagne",
+						"https://images.unsplash.com/photo-1590740924976-5a415ffcc934?q=80&w=300&auto=format&fit=crop",
+						29000, 12000, alcohol, true, 2);
+					saveMenuItem("ALC-002", "Château Margaux 2015", "First growth Bordeaux",
+						"https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?q=80&w=300&auto=format&fit=crop",
+						32000, 14000, alcohol, true, 2);
+					saveMenuItem("ALC-003", "Single Malt Whisky", "18 year aged Scottish single malt",
+						"https://images.unsplash.com/photo-1527281400683-1aae777175f8?q=80&w=300&auto=format&fit=crop",
+						4500, 1800, alcohol, true, 2);
 				}
 			}
 
@@ -623,5 +755,50 @@ public class DataSeeder {
 				userAccountRepository.save(admin);
 			}
 		};
+	}
+
+	private MenuCategory createCategory(String code, String name, String description, int displayOrder) {
+		MenuCategory category = new MenuCategory();
+		category.setCode(code);
+		category.setName(name);
+		category.setDescription(description);
+		category.setDisplayOrder(displayOrder);
+		category.setActive(true);
+		return menuCategoryRepository.save(category);
+	}
+
+	private void saveMenuItem(String code, String name, String description, String imageUrl,
+			Number price, Number costPrice, MenuCategory category, boolean available, int prepTime) {
+		MenuItem item = new MenuItem();
+		item.setCode(code);
+		item.setName(name);
+		item.setDescription(description);
+		item.setImageUrl(imageUrl);
+		item.setPrice(new BigDecimal(price.toString()));
+		item.setCostPrice(new BigDecimal(costPrice.toString()));
+		item.setCategory(category);
+		item.setAvailable(available);
+		item.setSignature(false);
+		item.setPreparationTime(prepTime);
+		item.setCreatedAt(LocalDateTime.now());
+		item.setUpdatedAt(LocalDateTime.now());
+		menuItemRepository.save(item);
+	}
+
+	private void ensureRoom(RoomRepository repo, String roomNumber, int floor, int price, int beds,
+			RoomStatus status, RoomType type, java.util.List<String> amenities, String guestName) {
+		if (repo.findAll().stream().anyMatch(r -> roomNumber.equals(r.getRoomNumber()))) {
+			return;
+		}
+		Room room = new Room();
+		room.setRoomNumber(roomNumber);
+		room.setFloor(floor);
+		room.setPrice(price);
+		room.setBeds(beds);
+		room.setStatus(status);
+		room.setRoomType(type);
+		room.setAmenities(new LinkedHashSet<>(amenities));
+		room.setGuestName(guestName);
+		repo.save(room);
 	}
 }

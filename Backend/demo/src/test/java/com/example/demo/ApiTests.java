@@ -21,15 +21,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
+import com.example.demo.auth.ChangePasswordRequest;
 import com.example.demo.auth.LoginRequest;
 import com.example.demo.auth.LoginResponse;
+import com.example.demo.auth.UpdatePreferencesRequest;
+import com.example.demo.auth.UpdateProfileRequest;
 import com.example.demo.auth.UserAccount;
+import com.example.demo.auth.UserAccountRepository;
 import com.example.demo.reservation.Reservation;
 import com.example.demo.reservation.ReservationStatus;
 import com.example.demo.role.Role;
 import com.example.demo.room.Room;
 import com.example.demo.room.RoomStatus;
 import com.example.demo.room.RoomType;
+import com.example.demo.room.RoomView;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
@@ -38,10 +43,24 @@ class ApiTests {
 	@Autowired
 	private TestRestTemplate rest;
 
+	@Autowired
+	private UserAccountRepository userAccountRepository;
+
 	private String token;
 
 	@BeforeEach
 	void login() {
+		userAccountRepository.findByEmail("test@example.com").ifPresent(user -> {
+			user.setPassword("testpass");
+			user.setEmail("test@example.com");
+			user.setFullName("Test User");
+			user.setTheme("dark");
+			user.setLanguage("en");
+			user.setNotificationsEnabled(true);
+			user.setEmailNotifications(true);
+			userAccountRepository.save(user);
+		});
+
 		LoginRequest request = new LoginRequest("test@example.com", "testpass");
 		ResponseEntity<LoginResponse> response = rest.postForEntity(
 			"/api/auth/login", request, LoginResponse.class);
@@ -157,9 +176,9 @@ class ApiTests {
 
 	@Test
 	void testRoomsList() {
-		ResponseEntity<List<Room>> response = rest.exchange(
+		ResponseEntity<List<RoomView>> response = rest.exchange(
 			authenticated(HttpMethod.GET, "/api/rooms", null),
-			new ParameterizedTypeReference<List<Room>>() {});
+			new ParameterizedTypeReference<List<RoomView>>() {});
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(response.getBody()).isNotEmpty();
 	}
@@ -204,9 +223,10 @@ class ApiTests {
 
 	@Test
 	void testRoomsUpdateStatus() {
-		List<Room> all = rest.exchange(authenticated(HttpMethod.GET, "/api/rooms", null),
-			new ParameterizedTypeReference<List<Room>>() {}).getBody();
-		Room room = all.stream().filter(r -> r.getStatus() == RoomStatus.AVAILABLE).findFirst().orElse(all.get(0));
+		List<RoomView> all = rest.exchange(authenticated(HttpMethod.GET, "/api/rooms", null),
+			new ParameterizedTypeReference<List<RoomView>>() {}).getBody();
+		Room room = all.stream().map(RoomView::getRoom)
+			.filter(r -> r.getStatus() == RoomStatus.AVAILABLE).findFirst().orElse(all.get(0).getRoom());
 
 		ResponseEntity<Room> updated = rest.exchange(
 			authenticated(HttpMethod.PATCH, "/api/rooms/" + room.getId() + "/status?status=MAINTENANCE", null), Room.class);
@@ -369,5 +389,113 @@ class ApiTests {
 		ResponseEntity<String> response = rest.exchange(
 			authenticated(HttpMethod.DELETE, "/api/rooms/99999", null), String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	}
+
+	@Test
+	void testUpdateProfile() {
+		UpdateProfileRequest req = new UpdateProfileRequest("WOTEGE Administrator", "test@example.com");
+		ResponseEntity<UserAccount> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me", req), UserAccount.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody()).isNotNull();
+		assertThat(response.getBody().getFullName()).isEqualTo("WOTEGE Administrator");
+		assertThat(response.getBody().getEmail()).isEqualTo("test@example.com");
+	}
+
+	@Test
+	void testUpdateProfileEmptyNameReturns400() {
+		UpdateProfileRequest req = new UpdateProfileRequest("", "test@example.com");
+		ResponseEntity<String> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me", req), String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void testUpdateProfileDuplicateEmailReturns409() {
+		UserAccount other = new UserAccount();
+		other.setUsername("other");
+		other.setPassword("otherpass");
+		other.setFullName("Other User");
+		other.setEmail("other@example.com");
+		other.setActive(true);
+		userAccountRepository.save(other);
+
+		UpdateProfileRequest req = new UpdateProfileRequest("Test User", "other@example.com");
+		ResponseEntity<String> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me", req), String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+	}
+
+	@Test
+	void testUpdateProfileWithoutTokenReturns401() {
+		UpdateProfileRequest req = new UpdateProfileRequest("Test User", "test@example.com");
+		HttpHeaders headers = new HttpHeaders();
+		RequestEntity<UpdateProfileRequest> request = new RequestEntity<>(req, headers,
+			HttpMethod.PUT, URI.create("/api/auth/me"));
+		ResponseEntity<String> response = rest.exchange(request, String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+	}
+
+	@Test
+	void testChangePassword() {
+		ChangePasswordRequest req = new ChangePasswordRequest("testpass", "newpass1");
+		ResponseEntity<UserAccount> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me/password", req), UserAccount.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+		LoginRequest loginWithNew = new LoginRequest("test@example.com", "newpass1");
+		ResponseEntity<LoginResponse> loginResponse = rest.postForEntity(
+			"/api/auth/login", loginWithNew, LoginResponse.class);
+		assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+	}
+
+	@Test
+	void testChangePasswordWrongCurrentReturns401() {
+		ChangePasswordRequest req = new ChangePasswordRequest("wrongpass", "newpass1");
+		ResponseEntity<String> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me/password", req), String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+	}
+
+	@Test
+	void testChangePasswordShortNewReturns400() {
+		ChangePasswordRequest req = new ChangePasswordRequest("testpass", "abc");
+		ResponseEntity<String> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me/password", req), String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void testUpdatePreferences() {
+		UpdatePreferencesRequest req = new UpdatePreferencesRequest("light", "fr", false, true);
+		ResponseEntity<UserAccount> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me/preferences", req), UserAccount.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody()).isNotNull();
+		assertThat(response.getBody().getTheme()).isEqualTo("light");
+		assertThat(response.getBody().getLanguage()).isEqualTo("fr");
+		assertThat(response.getBody().isNotificationsEnabled()).isFalse();
+		assertThat(response.getBody().isEmailNotifications()).isTrue();
+
+		ResponseEntity<UserAccount> me = rest.exchange(
+			authenticated(HttpMethod.GET, "/api/auth/me", null), UserAccount.class);
+		assertThat(me.getBody().getTheme()).isEqualTo("light");
+	}
+
+	@Test
+	void testUpdatePreferencesInvalidThemeReturns400() {
+		UpdatePreferencesRequest req = new UpdatePreferencesRequest("neon", "en", true, true);
+		ResponseEntity<String> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me/preferences", req), String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+	}
+
+	@Test
+	void testUpdatePreferencesPartial() {
+		UpdatePreferencesRequest req = new UpdatePreferencesRequest(null, "sw", null, null);
+		ResponseEntity<UserAccount> response = rest.exchange(
+			authenticated(HttpMethod.PUT, "/api/auth/me/preferences", req), UserAccount.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(response.getBody().getLanguage()).isEqualTo("sw");
 	}
 }
