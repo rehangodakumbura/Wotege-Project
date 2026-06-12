@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-wotege-black: #080808;
+  --color-wotege-matte: #111111;
+  --color-wotege-charcoal: #0F0F0F;
+  --color-wotege-charcoal-light: #141414;
+  --color-wotege-gold: #C5A059;
+  --color-wotege-gold-light: #D5B06A;
+  --color-wotege-gold-dim: rgba(197, 160, 89, 0.2);
+  --color-wotege-champagne: #F5F2ED;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --font-content: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-wotege-black text-[#F5F2ED] font-sans selection:bg-wotege-gold/30;
+  }
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  @apply bg-wotege-matte border border-white/5;
+}
+
+/* Soft gold glow */
+.gold-glow {
+  box-shadow: 0 0 20px rgba(197, 160, 89, 0.2);
+}
+
+.gold-glow-hover:hover {
+  box-shadow: 0 0 20px rgba(197, 160, 89, 0.3);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #080808;
+}
+::-webkit-scrollbar-thumb {
+  background: #141414;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C5A059;
+}
