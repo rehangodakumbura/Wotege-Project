@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.7.0</version>
+        <version>3.5.0</version>
         <relativePath/>
     </parent>
     <groupId>com.wotege</groupId>
@@ -15,10 +15,10 @@
     <description>Production-ready Hotel Management System Backend</description>
 
     <properties>
-        <java.version>26</java.version>
+        <java.version>21</java.version>
         <springdoc.version>3.0.0</springdoc.version>
         <org.mapstruct.version>1.6.0</org.mapstruct.version>
-        <org.projectlombok.version>1.18.36</org.projectlombok.version>
+        <org.projectlombok.version>1.18.38</org.projectlombok.version>
     </properties>
 
     <dependencies>

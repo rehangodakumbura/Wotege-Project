@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, type FormEvent } from 'react';
 import { GoldParticles } from '@/components/ui/GoldParticles';
@@ -10,6 +10,7 @@ export default function Login() {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -72,13 +73,23 @@ export default function Login() {
 
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold ml-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#141414] border border-white/5 rounded-2xl px-5 py-4 text-[#F5F2ED] text-sm focus:outline-none focus:border-wotege-gold/50 transition-all"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-[#141414] border border-white/5 rounded-2xl px-5 py-4 text-[#F5F2ED] text-sm focus:outline-none focus:border-wotege-gold/50 transition-all pr-12"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between text-xs font-medium">

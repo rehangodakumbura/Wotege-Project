@@ -23,7 +23,7 @@ public class AuthService {
     }
 
     public LoginResponse buildLoginResponse(String username, String token, String refreshToken) {
-        UserAccount account = userAccountRepository.findByUsername(username)
+        UserAccount account = findAccount(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         return new LoginResponse(
@@ -39,13 +39,13 @@ public class AuthService {
     }
 
     public String getUserRole(String username) {
-        UserAccount account = userAccountRepository.findByUsername(username)
+        UserAccount account = findAccount(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         return account.getRole() != null ? account.getRole().getCode() : "USER";
     }
 
     public Map<String, Object> getUserInfo(String username) {
-        UserAccount account = userAccountRepository.findByUsername(username)
+        UserAccount account = findAccount(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         Map<String, Object> info = new LinkedHashMap<>();
@@ -56,5 +56,9 @@ public class AuthService {
         info.put("role", account.getRole() != null ? account.getRole().getName() : null);
         info.put("roleCode", account.getRole() != null ? account.getRole().getCode() : null);
         return info;
+    }
+
+    private java.util.Optional<UserAccount> findAccount(String usernameOrEmail) {
+        return userAccountRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(usernameOrEmail, usernameOrEmail);
     }
 }

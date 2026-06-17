@@ -1,0 +1,72 @@
+# === Build Artifacts ===
+**/target/
+**/dist/
+**/build/
+*.jar
+*.war
+*.ear
+
+# === Logs ===
+*.log
+*.err
+*.out
+
+# === IDE & Editor ===
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+.apt_generated
+.springBeans
+.sts4-cache
+nbproject/
+nbdist/
+.nb-gradle/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Environment ===
+.env
+.env.local
+.env.*.local
+
+# === Node / Frontend ===
+Frontend/node_modules/
+Frontend/dist/
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# === Temp / Misc ===
+*.tmp
+*.swp
+*.swo
+*~
+*.bak
+
+# === Specific files ===
+skill.md
+Backend/demo/ERD.md
+Backend/demo/FRONTEND_BACKEND_BACKLOG.md
+Backend/demo/ERD.png.png
+Frontend/README.md
+run.log
+out.log
+Backend/demo/app.err
+Backend/demo/app.out
+
+# === Maven Wrapper jar ===
+**/.mvn/wrapper/maven-wrapper.jar

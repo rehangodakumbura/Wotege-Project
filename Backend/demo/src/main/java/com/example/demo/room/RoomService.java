@@ -1,10 +1,15 @@
 package com.example.demo.room;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.example.demo.config.NotificationService;
+import com.example.demo.reservation.Reservation;
+import com.example.demo.reservation.ReservationRepository;
+import com.example.demo.reservation.ReservationStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,16 +23,19 @@ public class RoomService {
     private final RoomTypeRepository roomTypeRepository;
     private final RoomStatusHistoryRepository statusHistoryRepository;
     private final NotificationService notificationService;
+    private final ReservationRepository reservationRepository;
 
     public RoomService(
             RoomRepository roomRepository,
             RoomTypeRepository roomTypeRepository,
             RoomStatusHistoryRepository statusHistoryRepository,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            ReservationRepository reservationRepository) {
         this.roomRepository = roomRepository;
         this.roomTypeRepository = roomTypeRepository;
         this.statusHistoryRepository = statusHistoryRepository;
         this.notificationService = notificationService;
+        this.reservationRepository = reservationRepository;
     }
 
     @Transactional(readOnly = true)
@@ -135,6 +143,31 @@ public class RoomService {
         Room existing = roomRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
         roomRepository.delete(existing);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Room> findAvailable(LocalDate checkIn, LocalDate checkOut, String type) {
+        List<Room> availableRooms = roomRepository.findByStatus(RoomStatus.AVAILABLE);
+
+        if (type != null && !type.isBlank()) {
+            availableRooms = availableRooms.stream()
+                    .filter(r -> r.getRoomType() != null &&
+                            (r.getRoomType().getName().toLowerCase().contains(type.toLowerCase()) ||
+                             r.getRoomType().getCode().toLowerCase().contains(type.toLowerCase())))
+                    .collect(Collectors.toList());
+        }
+
+        if (checkIn != null && checkOut != null) {
+            availableRooms = availableRooms.stream()
+                    .filter(room -> {
+                        List<Reservation> conflicts = reservationRepository
+                                .findConflicting(room.getId(), checkIn, checkOut);
+                        return conflicts.isEmpty();
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        return availableRooms;
     }
 
     @Transactional(readOnly = true)
